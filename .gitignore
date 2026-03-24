@@ -15,9 +15,7 @@ compile_commands.json
 *.ll
 *.log
 *.json
-*.md
 *.dylib
 bk_sources
 .DS_Store
 __pycache__
-project_loop
