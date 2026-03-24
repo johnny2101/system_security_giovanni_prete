@@ -9,6 +9,7 @@
 #include "cap_table.h"
 #include "cap_types.h"
 #include "cap_util.h"
+#include "cfa.h"
 #include "csr.h"
 #include "drivers/time.h"
 #include "error.h"
@@ -45,6 +46,7 @@ static inline err_t validate_mon_pmp_unload(const sys_args_t *);
 static inline err_t validate_sock_send(const sys_args_t *);
 static inline err_t validate_sock_recv(const sys_args_t *);
 static inline err_t validate_sock_sendrecv(const sys_args_t *);
+static inline err_t validate_cfa_get_event(const sys_args_t *);
 
 static proc_t *handle_get_info(proc_t *const, const sys_args_t *);
 static proc_t *handle_reg_read(proc_t *const, const sys_args_t *);
@@ -71,32 +73,33 @@ static proc_t *handle_mon_pmp_unload(proc_t *const, const sys_args_t *);
 static proc_t *handle_sock_send(proc_t *const, const sys_args_t *);
 static proc_t *handle_sock_recv(proc_t *const, const sys_args_t *);
 static proc_t *handle_sock_sendrecv(proc_t *const, const sys_args_t *);
+static proc_t *handle_cfa_get_event(proc_t *const, const sys_args_t *);
 
 typedef proc_t *(*handler_t)(proc_t *const, const sys_args_t *);
 typedef err_t (*validator_t)(const sys_args_t *);
 
 handler_t handlers[] = {
-    handle_get_info,	   handle_reg_read,	handle_reg_write,
-    handle_sync,	   handle_sleep,	handle_cap_read,
-    handle_cap_move,	   handle_cap_delete,	handle_cap_revoke,
-    handle_cap_derive,	   handle_pmp_load,	handle_pmp_unload,
-    handle_mon_suspend,	   handle_mon_resume,	handle_mon_state_get,
-    handle_mon_yield,	   handle_mon_reg_read, handle_mon_reg_write,
-    handle_mon_cap_read,   handle_mon_cap_move, handle_mon_pmp_load,
-    handle_mon_pmp_unload, handle_sock_send,	handle_sock_recv,
-    handle_sock_sendrecv,
+    handle_get_info,	   handle_reg_read,	 handle_reg_write,
+    handle_sync,	   handle_sleep,	 handle_cap_read,
+    handle_cap_move,	   handle_cap_delete,	 handle_cap_revoke,
+    handle_cap_derive,	   handle_pmp_load,	 handle_pmp_unload,
+    handle_mon_suspend,	   handle_mon_resume,	 handle_mon_state_get,
+    handle_mon_yield,	   handle_mon_reg_read,	 handle_mon_reg_write,
+    handle_mon_cap_read,   handle_mon_cap_move,	 handle_mon_pmp_load,
+    handle_mon_pmp_unload, handle_sock_send,	 handle_sock_recv,
+    handle_sock_sendrecv,  handle_cfa_get_event,
 };
 
 validator_t validators[] = {
-    validate_get_info,	     validate_reg_read,	    validate_reg_write,
-    validate_sync,	     validate_sleep,	    validate_cap_read,
-    validate_cap_move,	     validate_cap_delete,   validate_cap_revoke,
-    validate_cap_derive,     validate_pmp_load,	    validate_pmp_unload,
-    validate_mon_suspend,    validate_mon_resume,   validate_mon_state_get,
-    validate_mon_yield,	     validate_mon_reg_read, validate_mon_reg_write,
-    validate_mon_cap_read,   validate_mon_cap_move, validate_mon_pmp_load,
-    validate_mon_pmp_unload, validate_sock_send,    validate_sock_recv,
-    validate_sock_sendrecv,
+    validate_get_info,	     validate_reg_read,	     validate_reg_write,
+    validate_sync,	     validate_sleep,	     validate_cap_read,
+    validate_cap_move,	     validate_cap_delete,    validate_cap_revoke,
+    validate_cap_derive,     validate_pmp_load,	     validate_pmp_unload,
+    validate_mon_suspend,    validate_mon_resume,    validate_mon_state_get,
+    validate_mon_yield,	     validate_mon_reg_read,  validate_mon_reg_write,
+    validate_mon_cap_read,   validate_mon_cap_move,  validate_mon_pmp_load,
+    validate_mon_pmp_unload, validate_sock_send,     validate_sock_recv,
+    validate_sock_sendrecv,  validate_cfa_get_event,
 };
 
 proc_t *syscall_handler(proc_t *proc)
@@ -617,4 +620,29 @@ proc_t *handle_sock_sendrecv(proc_t *const p, const sys_args_t *args)
 	proc_t *next = p;
 	p->regs[REG_T0] = cap_sock_sendrecv(sock, &msg, &next);
 	return next;
+}
+
+err_t validate_cfa_get_event(const sys_args_t *args)
+{
+	return SUCCESS;
+}
+
+proc_t *handle_cfa_get_event(proc_t *const p, const sys_args_t *args)
+{
+	// VULN-5 FIX: Only the monitor (PID 0) is allowed to consume CFA events
+	if (p->pid != 0) {
+		p->regs[REG_T0] = ERR_INVALID_SYSCALL;
+		return p;
+	}
+	uint64_t old_pc, new_pc;
+	uint8_t event_type, is_call, is_return;
+	err_t err = cfa_get_event(&old_pc, &new_pc, &event_type, &is_call,
+			      &is_return);
+	p->regs[REG_T0] = err;
+	if (!err) {
+		p->regs[REG_A0] = old_pc;
+		p->regs[REG_A1] = new_pc;
+		p->regs[REG_A2] = event_type;
+	}
+	return p;
 }

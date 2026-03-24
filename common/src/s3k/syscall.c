@@ -35,6 +35,9 @@ typedef enum {
 	S3K_SYS_SOCK_SEND,
 	S3K_SYS_SOCK_RECV,
 	S3K_SYS_SOCK_SENDRECV,
+
+	// CFA Monitor
+	S3K_SYS_CFA_GET_EVENT,
 } s3k_syscall_t;
 
 typedef union {
@@ -670,4 +673,25 @@ s3k_reply_t s3k_try_sock_sendrecv(s3k_cidx_t sock_idx, const s3k_msg_t *msg)
 	reply.data[2] = a4;
 	reply.data[3] = a5;
 	return reply;
+}
+
+s3k_err_t s3k_cfa_get_event(uint64_t *old_pc, uint64_t *new_pc,
+			    uint8_t *event_type, uint8_t *is_call,
+			    uint8_t *is_return)
+{
+	register uint64_t t0 __asm__("t0") = S3K_SYS_CFA_GET_EVENT;
+	register uint64_t a0 __asm__("a0");
+	register uint64_t a1 __asm__("a1");
+	register uint64_t a2 __asm__("a2");
+
+	__asm__ volatile("ecall" : "+r"(t0), "=r"(a0), "=r"(a1), "=r"(a2));
+
+	if (!t0) {
+		*old_pc = a0;
+		*new_pc = a1;
+		*event_type = (uint8_t)a2;
+		*is_call = (*event_type) & 1;
+		*is_return = ((*event_type) >> 1) & 1;
+	}
+	return t0;
 }

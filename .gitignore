@@ -11,3 +11,13 @@ docs
 *.res
 compile_commands.json
 .cache
+
+*.ll
+*.log
+*.json
+*.md
+*.dylib
+bk_sources
+.DS_Store
+__pycache__
+project_loop

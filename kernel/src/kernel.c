@@ -1,6 +1,7 @@
 #include "kernel.h"
 
 #include "altc/init.h"
+#include "cfa.h"
 #include "cap_lock.h"
 #include "cap_table.h"
 #include "csr.h"
@@ -22,6 +23,8 @@ void kernel_init(void)
 	kprintf(0, "# scheduler initialized\n");
 	proc_init();
 	kprintf(0, "# processes initialized\n");
+	cfa_init();
+	kprintf(0, "# cfa initialized\n");
 	kprintf(0, "# kernel initialization complete\n");
 	kprintf(0, "# starting boot process\n");
 }

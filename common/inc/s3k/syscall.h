@@ -65,3 +65,7 @@ s3k_err_t s3k_try_mon_pmp_unload(s3k_cidx_t mon_idx, s3k_pid_t pid,
 s3k_err_t s3k_try_sock_send(s3k_cidx_t sock_idx, const s3k_msg_t *msg);
 s3k_reply_t s3k_try_sock_recv(s3k_cidx_t sock_idx, s3k_cidx_t cap_cidx);
 s3k_reply_t s3k_try_sock_sendrecv(s3k_cidx_t sock_idx, const s3k_msg_t *msg);
+
+s3k_err_t s3k_cfa_get_event(uint64_t *old_pc, uint64_t *new_pc,
+			    uint8_t *event_type, uint8_t *is_call,
+			    uint8_t *is_return);

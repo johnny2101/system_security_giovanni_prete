@@ -41,6 +41,9 @@ typedef enum {
 	SYS_SOCK_SEND,
 	SYS_SOCK_RECV,
 	SYS_SOCK_SENDRECV,
+
+	// CFA Monitor
+	SYS_CFA_GET_EVENT,
 } syscall_t;
 
 typedef union {
